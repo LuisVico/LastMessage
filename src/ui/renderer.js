@@ -1,18 +1,18 @@
-import { showAnalytics } from './analytics.js';
-
 import { State } from './state.js';
-import story from '../engine/story.json' assert {type:'json'};
+// import story from '../engine/story.json' assert {type:'json'};
+
+const API_URL = 'http://localhost:3000';
 
 const app = document.getElementById('app');
 app.innerHTML = `
 <header class="bg-zinc-900/80 backdrop-blur p-3 flex items-center justify-between border-b border-zinc-700">
-  <i class="fas fa-chevron-left text-blue-500 text-xl w-8"></i>
+  <i id="home-btn" class="fas fa-chevron-left text-blue-500 text-xl w-8 cursor-pointer"></i>
   <div class="text-center">
     <div class="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center font-bold text-white text-xl mx-auto -mb-2">L</div>
     <h1 class="font-semibold text-white mt-2">Leo</h1>
     <p class="text-xs text-gray-400">home</p>
   </div>
-  <i class="fas fa-info-circle text-blue-500 text-xl w-8"></i>
+  <i id="info-btn" class="fas fa-info-circle text-blue-500 text-xl w-8 cursor-pointer"></i>
 </header>
 <main id="chat-log" class="flex-1 p-4 overflow-y-auto flex flex-col"></main>
 <footer id="input-area" class="bg-zinc-900 p-3 border-t border-zinc-700">
@@ -70,15 +70,30 @@ export function renderChoices(list){
   });
 }
 
-function selectChoice(choice){
-  State.update(st=>{
-    st.panic = Math.max(0, Math.min(2, st.panic + (choice.panic||0)));
-    if(choice.setFlag) st.flags.add(choice.setFlag);
-    st.currentNodeId = choice.target;
-  });
+async function selectChoice(choice){
   renderBubble({s:'p', t:choice.text});
-  State.timeline.push({panic: State.panic});
-  processNode();
+  try {
+    const response = await fetch(`${API_URL}/game/choice`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ choice })
+    });
+    if (!response.ok) throw new Error('Failed to select choice');
+    const { node, state } = await response.json();
+    
+    // Update local state for UI rendering if needed
+    State.update(st => {
+        st.panic = state.panic;
+        st.flags = new Set(state.flags);
+        st.currentNodeId = state.currentNodeId;
+    });
+
+    await processNode(node);
+
+  } catch (error) {
+      console.error('Error selecting choice:', error);
+      renderBubble({s:'sys', t:'Error connecting to server.'});
+  }
 }
 
 sendBtn.onclick=()=>handleFree();
@@ -100,8 +115,7 @@ async function handleFree(){
   input.value='';
 }
 
-export async function processNode(){
-  const node=story[State.currentNodeId];
+export async function processNode(node){
   if(!node){ console.error('missing node'); return; }
   for(const m of node.messages){
     await new Promise(r=>setTimeout(r, m.s==='sys'?100:600));
@@ -119,13 +133,45 @@ export async function processNode(){
   }else{
     input.disabled=true;
     sendBtn.disabled=true;
+    const restartBtn = document.createElement('button');
+    restartBtn.textContent = 'GAME OVER. RESTART?';
+    restartBtn.className = 'border border-red-500 text-red-500 px-4 py-2 rounded-full text-sm shrink-0 hover:bg-red-500 hover:text-white mt-4';
+    restartBtn.onclick = () => window.location.reload();
+    suggestions.innerHTML = '';
+    suggestions.append(restartBtn);
   }
+}
+
+async function startGame() {
+    try {
+        const response = await fetch(`${API_URL}/game/start`);
+        if (!response.ok) throw new Error('Failed to start game');
+        const { node, state } = await response.json();
+        
+        State.update(st => {
+            st.panic = state.panic;
+            st.flags = new Set(state.flags);
+            st.currentNodeId = state.currentNodeId;
+        });
+        
+        await processNode(node);
+    } catch (error) {
+        console.error('Error starting game:', error);
+        renderBubble({s:'sys', t:'Could not connect to the game server. Please try again later.'});
+    }
 }
 
 // subscriber keeps UI in sync (future)
 State.subscribe(()=>{});
 
-processNode();
+startGame();
 
+document.getElementById('home-btn').onclick = () => {
+    if (confirm('Are you sure you want to restart the game?')) {
+        window.location.reload();
+    }
+};
 
-document.getElementById('stats-btn').onclick = showAnalytics;
+document.getElementById('info-btn').onclick = () => {
+    alert('This is a narrative-driven game where your choices matter. Try to keep Leo safe!\\n\\nMade with love by a human and an AI assistant.');
+};
