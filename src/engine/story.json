@@ -1,0 +1,114 @@
+{
+  "NODE_1": {
+    "messages": [
+      {
+        "s": "l",
+        "t": "you there?"
+      },
+      {
+        "s": "l",
+        "t": "please answer"
+      },
+      {
+        "s": "l",
+        "t": "SOMEONE IS IN THE HOUSE",
+        "u": true
+      }
+    ],
+    "choices": [
+      {
+        "text": "Where are you?",
+        "target": "NODE_2A",
+        "panic": 0
+      },
+      {
+        "text": "Are you sure?",
+        "target": "NODE_2B",
+        "panic": -1
+      },
+      {
+        "text": "Call the police!",
+        "target": "NODE_2C",
+        "panic": 2
+      }
+    ]
+  },
+  "NODE_2A": {
+    "messages": [
+      {
+        "s": "l",
+        "t": "my room. i heard a window break downstairs"
+      },
+      {
+        "s": "l",
+        "t": "i'm hiding under my desk"
+      },
+      {
+        "s": "l",
+        "t": "footsteps... coming up the stairs..."
+      },
+      {
+        "s": "l",
+        "t": "what do i do what do i do"
+      }
+    ],
+    "choices": [
+      {
+        "text": "Stay completely still. Don't breathe.",
+        "target": "NODE_3A",
+        "panic": 0
+      },
+      {
+        "text": "Get in the closet. NOW.",
+        "target": "NODE_3B",
+        "panic": 1
+      }
+    ]
+  },
+  "NODE_3A": {
+    "messages": [
+      {
+        "s": "sys",
+        "t": "SOUND: Footsteps reach the landing. A shadow passes under the door."
+      },
+      {
+        "s": "l",
+        "t": "a shadow. i saw a shadow under the door"
+      },
+      {
+        "s": "l",
+        "t": "he's right outside my room"
+      }
+    ],
+    "choices": [
+      {
+        "text": "Don't make a sound.",
+        "target": "NODE_4_SAFE",
+        "panic": 0
+      },
+      {
+        "text": "Get ready to run.",
+        "target": "NODE_4_SAFE",
+        "panic": 1
+      }
+    ]
+  },
+  "NODE_4_SAFE": {
+    "messages": [
+      {
+        "s": "l",
+        "t": "...i think he left the hallway"
+      }
+    ],
+    "choices": []
+  },
+  "FAIL_STATE_DOOR": {
+    "messages": [
+      {
+        "s": "sys",
+        "t": "CONNECTION LOST"
+      }
+    ],
+    "choices": []
+  }
+}
