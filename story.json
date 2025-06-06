@@ -1,0 +1,35 @@
+{
+  "NODE_1": {
+    "m": [
+      {
+        "s": "l",
+        "t": "you there?"
+      },
+      {
+        "s": "l",
+        "t": "someone's inside!"
+      }
+    ],
+    "c": [
+      {
+        "txt": "Stay calm, where are you?",
+        "tgt": "NODE_2",
+        "p": 0
+      },
+      {
+        "txt": "Hide now!",
+        "tgt": "NODE_2",
+        "p": 1
+      }
+    ]
+  },
+  "NODE_2": {
+    "m": [
+      {
+        "s": "l",
+        "t": "under the desk..."
+      }
+    ],
+    "c": []
+  }
+}

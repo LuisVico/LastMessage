@@ -1,0 +1,10 @@
+{
+  "jwt": "<redacted>",
+  "conversation_id": "abc123",
+  "tags": [
+    "advise_escape"
+  ],
+  "leo_panic": 2,
+  "player_msg": "Get to the back stairs! Quietly.",
+  "panic_modifier": 2
+}
