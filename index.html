@@ -1,229 +1,26 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Last Message</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            -webkit-tap-highlight-color: transparent;
-        }
-        #chat-log::-webkit-scrollbar { width: 4px; }
-        #chat-log::-webkit-scrollbar-thumb { background-color: #4a4a4a; border-radius: 20px; }
-        #chat-log::-webkit-scrollbar-track { background: transparent; }
-        .chat-input { background-color: #2c2c2e; border: 1px solid #444447; border-radius: 20px; padding: 8px 15px; color: white; font-size: 16px; }
-        .chat-input::placeholder { color: #8e8e93; }
-        .chat-input:focus { outline: none; border-color: #007aff; }
-        .suggestion-bubble { background-color: transparent; border: 1px solid #007aff; color: #007aff; padding: 8px 15px; border-radius: 20px; font-size: 14px; transition: background-color 0.2s, color 0.2s; cursor: pointer; }
-        .suggestion-bubble:hover { background-color: #007aff; color: white; }
-        .send-button.active { color: #007aff; }
-        .send-button.inactive { color: #8e8e93; }
-        .loading-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 50; }
-    </style>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no"/>
+    <title>Leo — Panic Chat</title>
+
+    <!-- Built Tailwind CSS -->
+    <link rel="stylesheet" href="dist/output.css"/>
+
+    <!-- Icon font -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+
+    <!-- Fuse.js for local intent matching -->
+    <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script>
+
+    <!-- Web‑audio files will be preloaded via JS -->
 </head>
 <body class="bg-black flex items-center justify-center h-screen">
 
-    <div id="game-container" class="w-full h-full max-w-sm bg-[#1c1c1e] shadow-2xl flex flex-col relative">
-        
-        <header class="bg-[#1c1c1e] backdrop-blur-md bg-opacity-80 p-3 flex items-center justify-between border-b border-[#3a3a3c]">
-            <i class="fas fa-chevron-left text-blue-500 text-xl font-light w-8"></i>
-            <div class="text-center">
-                 <div class="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center font-bold text-white text-xl mx-auto -mb-2">L</div>
-                <h1 class="font-semibold text-white mt-2">Leo</h1>
-                <p class="text-xs text-gray-500">home</p>
-            </div>
-            <i class="fas fa-info-circle text-blue-500 text-xl w-8"></i>
-        </header>
+<div id="app" class="w-full h-full max-w-sm bg-zinc-900 shadow-2xl flex flex-col relative"></div>
 
-        <main id="chat-log" class="flex-1 p-4 overflow-y-auto space-y-2 flex flex-col">
-            <!-- Messages will be injected here by JavaScript -->
-        </main>
-
-        <footer id="input-area" class="bg-[#1c1c1e] p-3 border-t border-[#3a3a3c]">
-            <div id="suggestions-container" class="flex space-x-2 overflow-x-auto pb-2">
-                 <!-- Suggestions will be injected here by JavaScript -->
-            </div>
-            <div class="flex items-center pt-2">
-                <div class="flex-1">
-                    <input type="text" id="free-text-input" placeholder="iMessage" class="w-full chat-input">
-                </div>
-                <button id="send-button" class="ml-2 text-3xl send-button inactive">
-                    <i class="fas fa-arrow-circle-up"></i>
-                </button>
-            </div>
-        </footer>
-        
-        <!-- Loading Overlay for AI calls -->
-        <div id="loading-overlay" class="loading-overlay hidden">
-            <i class="fas fa-spinner fa-spin text-white text-3xl"></i>
-        </div>
-
-    </div>
-
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-
-    const chatLog = document.getElementById('chat-log');
-    const suggestionsContainer = document.getElementById('suggestions-container');
-    const freeTextInput = document.getElementById('free-text-input');
-    const sendButton = document.getElementById('send-button');
-    const loadingOverlay = document.getElementById('loading-overlay');
-
-    let currentNodeId = 'NODE_1';
-    let isAwaitingInput = true;
-    let leoPanic = 0;
-    let flags = new Set();
-
-    const story = {
-        'NODE_1': { messages: [{ s: 'l', t: 'you there?' }, { s: 'l', t: 'please answer' }, { s: 'l', t: 'SOMEONE IS IN THE HOUSE', u: true }], choices: [{ text: 'Where are you?', target: 'NODE_2A', panic: 0 }, { text: 'Are you sure?', target: 'NODE_2B', panic: -1 }, { text: 'Call the police!', target: 'NODE_2C', panic: 2 }] },
-        'NODE_2A': { messages: [{ s: 'l', t: 'my room. i heard a window break downstairs' }, { s: 'l', t: 'i\'m hiding under my desk' }, { s: 'l', t: 'footsteps... coming up the stairs...' }, { s: 'l', t: 'what do i do what do i do' }], choices: [{ text: 'Stay completely still. Don\'t breathe.', target: 'NODE_3A', panic: 0 }, { text: 'Get in the closet. NOW.', target: 'NODE_3B', panic: 1 }] },
-        'NODE_2B': { messages: [{ s: 'l', t: 'it\'s not the wind. i know it\'s not' }, { s: 'l', t: 'i heard glass break. like a window' }, { s: 'l', t: 'oh god. i hear footsteps. they\'re coming upstairs' }, { s: 'l', t: 'you didn\'t believe me' }], choices: [{ text: 'Okay, I believe you. Hide now.', target: 'NODE_3B', panic: -1 }, { text: 'Where are they? Can you see them?', target: 'NODE_3C', panic: 1 }] },
-        'NODE_2C': { messages: [{ s: 'l', t: 'i can\'t. i\'m too scared to make a sound' }, { s: 'l', t: 'they\'ll hear me. i know they will' }, { s: 'l', t: 'they\'re coming up the stairs now! what do i do??' }], choices: [{ text: 'You HAVE to call. Now!', target: 'FAIL_STATE_1', panic: 2 }, { text: 'Okay, don\'t call. Just hide.', target: 'NODE_3B', panic: -1 }] },
-        'NODE_3A': { messages: [{ s: 'sys', t: 'SOUND: Footsteps reach the landing. A shadow passes under the door.'}, { s: 'l', t: 'a shadow. i saw a shadow under the door' }, { s: 'l', t: 'he\'s right outside my room' }], choices: [{ text: 'Don\'t make a sound.', target: 'NODE_4_CRITICAL', panic: 0 }, { text: 'Get ready to run.', target: 'NODE_4_CRITICAL', panic: 1 }] },
-        'NODE_3B': { messages: [{ s: 'sys', t: 'SOUND: Footsteps on the landing. They walk past your door.'}, { s: 'l', t: 'ok im in. its dark. i pulled the door almost shut' }, { s: 'l', t: 'he\'s on my floor. i hear him walking in the hallway.'}, {s: 'l', t: 'he\'s going into mom and dads room'}], choices: [{ text: 'Keep quiet. Let him search.', target: 'NODE_4A', panic: -1 }, { text: 'Can you lock the closet door?', target: 'NODE_4B', panic: 0 }] },
-        'NODE_3C': { messages: [{ s: 'l', t: 'ok ok i\'m looking' }, { s: 'l', t: 'there\'s a guy. he\'s at the end of the hall. he hasn\'t seen me.'}, { s: 'l', t: 'i think i have a chance to get out'}], choices: [{ text: 'Go! Get to the back stairs!', target: 'NODE_5A_ESCAPE', panic: 2}, { text: 'No, get back. Don\'t risk it. Hide.', target: 'NODE_3B', panic: -1}] },
-        'NODE_4_CRITICAL': { isLogicNode: true, logic: () => leoPanic > 1 ? 'FAIL_STATE_DOOR' : 'NODE_5B_SAFE' },
-        'NODE_4A': { messages: [{ s: 'sys', t: 'SOUND: Drawers opening in the other room.'}, { s: 'l', t: 'he\'s still in there. just rummaging around.'}, { s: 'l', t: 'my phone battery is at 15%'}], choices: [{ text: 'Just wait. He\'ll leave.', target: 'NODE_5B_SAFE', panic: -1}, { text: 'Is there anything in the closet with you?', target: 'NODE_5D_WEAPON', panic: 1}] },
-        'NODE_4B': { isLogicNode: true, logic: () => { renderMessage({ s: 'sys', t: 'SOUND: A loud CLICK as the old lock engages.'}); renderMessage({ s: 'l', t: 'ok it\'s locked.'}); renderMessage({ s: 'l', t: 'but i think he heard that.'}); renderMessage({ s: 'l', t: 'the footsteps stopped.'}); return Math.random() > 0.5 ? 'NODE_4_CRITICAL' : 'NODE_5B_SAFE' } },
-        'NODE_5A_ESCAPE': { messages: [{s: 'l', t: 'im out. im on the lawn.'}, {s: 'l', t: 'im running to the neighbor\'s house.'}, {s: 'l', t: 'i\'m safe.'}, {s: 'sys', t: 'YOU FOUND A SAFE WAY OUT'}], choices: []},
-        'NODE_5B_SAFE': { messages: [{s: 'l', t: 'phew. ok. i think he moved on.'}, {s: 'l', t: 'i can\'t hear footsteps anymore. just... silence.'}, {s: 'l', t: 'what now? do i just wait?'}], choices: [{ text: 'Yes. Stay exactly where you are. Don\'t move.', target: 'NODE_6A_WAIT', panic: -1 }, { text: 'We need to find a way out. Is your window an option?', target: 'NODE_6B_ESCAPE_PLAN', panic: 0 }, { text: 'Try to hear what he\'s doing. Listen closely.', target: 'NODE_6C_RECON', panic: 1 }] },
-        'NODE_5D_WEAPON': { messages: [{s: 'l', t: 'uhh just my old baseball bat...'}, {s: 'l', t: 'it\'s right here.'}, {s: 'l', t: 'you think i should... use it?'}], choices: [{ text: 'No. God, no. Just hold it. Only for an emergency.', target: 'NODE_6A_WAIT', panic: -1, setFlag: 'has_weapon' }, { text: 'Keep it ready. If he opens that door, you swing.', target: 'NODE_6A_WAIT', panic: 2, setFlag: 'is_aggressive' }] },
-        'NODE_6A_WAIT': { messages: [{s: 'sys', t: 'A tense silence stretches on.'}, {s: 'l', t: 'this is taking forever'}, {s: 'l', t: 'what if he doesn\'t leave?'}], isLogicNode: true, logic: () => 'EVENT_INCOMING_CALL' },
-        'EVENT_INCOMING_CALL': { messages: [{s: 'sys', t: 'SOUND: A low, persistent BUZZING begins...'}, {s: 'l', t: 'oh no'}, {s: 'l', t: 'MOM IS CALLING ME'}, {s: 'l', t: 'IT\'S VIBRATING. HE MIGHT HEAR IT. WHAT DO I DO???'}, {s: 'img', src: 'https://placehold.co/400x800/000000/FFFFFF?text=Mom%5CnIncoming+Call'}], choices: [{ text: 'DECLINE IT! FAST!', target: 'NODE_7A_DECLINE', panic: 2 }, { text: 'ANSWER IT. BUT BE SILENT.', target: 'NODE_7B_ANSWER', panic: 1 }, { text: 'Let it ring. Don\'t touch it.', target: 'NODE_7C_IGNORE', panic: 0 }] },
-        'NODE_7A_DECLINE': { messages: [{s: 'l', t: 'ok ok i declined it'}, {s: 'l', t: 'it stopped.'}, {s: 'l', t: 'but now she\'s gonna text. she\'s gonna freak out.'}], isLogicNode: true, logic: () => 'NODE_8_TEXT_STORM' },
-        'NODE_8_TEXT_STORM': { messages: [{s: 'l', t: '(From Mom): Leo? Why\'d you decline?'}, {s: 'l', t: '(From Mom): Is everything okay? Answer me.'}, {s: 'l', t: '(From Mom): I\'m calling Dad.'}, {s: 'l', t: 'she\'s freaking out. this is bad. this is really bad.'}, {s: 'l', t: 'what do i tell her?'}], choices: [{ text: 'Text her from your phone. Say you\'re fine.', target: 'NODE_9A_DECEPTION' }, { text: 'Do nothing. We can\'t risk it.', target: 'NODE_9B_SILENCE' }, { text: 'Text me exactly what to say to her.', target: 'NODE_9C_RELAY' }] },
-        'FAIL_STATE_1': { messages: [{ s: 'sys', t: 'SOUND: A phone clatters on the floor. Footsteps stop, then rush towards the door.'}, { s: 'l', t: 'oh no i dropped my ph' }, { s: 'sys', t: 'CONNECTION LOST' }], choices: [] },
-        'FAIL_STATE_DOOR': { messages: [{ s: 'sys', t: 'SOUND: A panicked whimper. The doorknob begins to turn slowly.'}, { s: 'l', t: 'he heard me. the handle is turning' }, { s: 'sys', t: 'CONNECTION LOST' }], choices: [] },
-    };
-    
-    async function getAIIntent(playerText, availableChoices) {
-        loadingOverlay.classList.remove('hidden');
-        const choiceMap = availableChoices.map((choice, index) => `"${index}": "${choice.text}"`).join(', ');
-        const prompt = `You are a game engine intent classifier. A player in a thriller game is texting their younger brother, Leo, who is hiding from an intruder. The player just typed: "${playerText}". Based on this text, which of the following available choices is the player's core intent? The available choices are: {${choiceMap}}. Respond with only the corresponding index number of the best match. If there is no good match, respond with "null". Do not add any other text or explanation.`;
-        const apiKey = "";
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-        
-        try {
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-            });
-            if (!response.ok) throw new Error(`API error: ${response.status}`);
-            const result = await response.json();
-            const choiceIndexText = result.candidates[0].content.parts[0].text.trim();
-            if (choiceIndexText !== "null") {
-                const choiceIndex = parseInt(choiceIndexText, 10);
-                if (!isNaN(choiceIndex) && choiceIndex >= 0 && choiceIndex < availableChoices.length) {
-                    return availableChoices[choiceIndex].target;
-                }
-            }
-            return null;
-        } catch (error) {
-            console.error("AI Intent Classifier Error:", error);
-            return null;
-        } finally {
-            loadingOverlay.classList.add('hidden');
-        }
-    }
-
-    function renderMessage(message) {
-        const messageWrapper = document.createElement('div');
-        const messageBubble = document.createElement('div');
-        if (message.s === 'l') { messageWrapper.className = 'flex justify-start'; messageBubble.className = 'bg-[#3a3a3c] text-white p-3 rounded-2xl max-w-[75%]'; if (message.u) messageBubble.classList.add('font-semibold', 'text-red-400'); } 
-        else if (message.s === 'p') { messageWrapper.className = 'flex justify-end'; messageBubble.className = 'bg-[#007aff] text-white p-3 rounded-2xl max-w-[75%]'; } 
-        else if (message.s === 'img') { messageWrapper.className = 'flex justify-start'; const img = document.createElement('img'); img.src = message.src; img.className = 'rounded-2xl max-w-[75%]'; messageBubble.appendChild(img); }
-        else { messageWrapper.className = 'text-center text-xs text-gray-500 my-2 italic'; messageBubble.textContent = message.t; messageWrapper.appendChild(messageBubble); chatLog.prepend(messageWrapper); chatLog.scrollTop = chatLog.scrollHeight; return; }
-        if (message.t) messageBubble.textContent = message.t;
-        messageWrapper.appendChild(messageBubble);
-        chatLog.prepend(messageWrapper);
-        chatLog.scrollTop = chatLog.scrollHeight;
-    }
-
-    function renderChoices(choices) {
-        suggestionsContainer.innerHTML = '';
-        if (!choices) return;
-        choices.forEach(choice => {
-            const button = document.createElement('button');
-            button.className = 'suggestion-bubble flex-shrink-0';
-            button.textContent = choice.text;
-            button.onclick = () => selectChoice(choice);
-            suggestionsContainer.appendChild(button);
-        });
-    }
-
-    function simulateTyping() {
-        return new Promise(resolve => {
-            const typingIndicator = `<div id="typing-indicator" class="flex justify-start"><div class="bg-[#3a3a3c] p-3 rounded-2xl"><div class="flex items-center space-x-1"><span class="w-2 h-2 bg-gray-500 rounded-full animate-pulse" style="animation-delay:0s"></span><span class="w-2 h-2 bg-gray-500 rounded-full animate-pulse" style="animation-delay:0.2s"></span><span class="w-2 h-2 bg-gray-500 rounded-full animate-pulse" style="animation-delay:0.4s"></span></div></div></div>`;
-            chatLog.insertAdjacentHTML('afterbegin', typingIndicator);
-            chatLog.scrollTop = chatLog.scrollHeight;
-            const delay = 1000 + Math.random() * 1500;
-            setTimeout(() => { document.getElementById('typing-indicator')?.remove(); resolve(); }, delay);
-        });
-    }
-
-    async function processNode(nodeId) {
-        let node = story[nodeId];
-        if (!node) { console.error(`Node ${nodeId} not found!`); return; }
-        if (node.isLogicNode) { const nextNodeId = node.logic(); processNode(nextNodeId); return; }
-        isAwaitingInput = false;
-        suggestionsContainer.innerHTML = '';
-        if (node.messages && node.messages.some(m => m.s === 'l')) await simulateTyping();
-        for (const message of node.messages) {
-            renderMessage(message);
-            await new Promise(res => setTimeout(res, message.s === 'sys' ? 100 : 600));
-        }
-        if (node.choices && node.choices.length > 0) { renderChoices(node.choices); isAwaitingInput = true; } 
-        else { isAwaitingInput = false; freeTextInput.disabled = true; sendButton.classList.add('inactive'); }
-    }
-
-    function selectChoice(choice) {
-        if (!isAwaitingInput) return;
-        leoPanic = Math.max(0, Math.min(2, leoPanic + (choice.panic || 0)));
-        if(choice.setFlag) flags.add(choice.setFlag);
-        renderMessage({ s: 'p', t: choice.text });
-        currentNodeId = choice.target;
-        isAwaitingInput = false;
-        suggestionsContainer.innerHTML = '';
-        const dangerTime = choice.text.length * 50; 
-        setTimeout(() => { processNode(currentNodeId); }, dangerTime);
-    }
-    
-    async function sendFreeText() {
-        const text = freeTextInput.value.trim();
-        if (!isAwaitingInput || text === '') return;
-        const node = story[currentNodeId];
-        if (!node.choices) return;
-        const targetNode = await getAIIntent(text, node.choices);
-        if (targetNode) {
-            const matchedChoice = node.choices.find(c => c.target === targetNode);
-            selectChoice({ text: text, target: targetNode, panic: matchedChoice.panic, setFlag: matchedChoice.setFlag });
-        } else {
-             renderMessage({ s: 'l', t: 'what? i dont get it. just tell me what to do' });
-        }
-        freeTextInput.value = '';
-        updateSendButtonState();
-    }
-
-    function updateSendButtonState() {
-        if (freeTextInput.value.trim() !== '') { sendButton.classList.remove('inactive'); sendButton.classList.add('active'); } 
-        else { sendButton.classList.remove('active'); sendButton.classList.add('inactive'); }
-    }
-
-    sendButton.addEventListener('click', sendFreeText);
-    freeTextInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendFreeText(); });
-    freeTextInput.addEventListener('input', updateSendButtonState);
-
-    const timestamp = document.createElement('div');
-    timestamp.className = 'text-center text-xs text-gray-500 my-4';
-    timestamp.textContent = 'Today 8:14 PM';
-    chatLog.prepend(timestamp);
-    processNode(currentNodeId);
-});
-</script>
+<script type="module" src="src/ui/main.js"></script>
 </body>
 </html>
