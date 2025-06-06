@@ -1,0 +1,30 @@
+
+name: Unity CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cache Library
+        uses: actions/cache@v4
+        with:
+          path: |
+            unity/Library
+          key: ${{ runner.os }}-unity-${{ hashFiles('**/Assets/**', '**/Packages/**', '**/ProjectSettings/**') }}
+      - name: Build Windows Player (headless)
+        uses: game-ci/unity-builder@v3
+        with:
+          unityVersion: 2023.3.2f1
+          projectPath: unity
+          targetPlatform: WebGL
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WebGL
+          path: build/WebGL
