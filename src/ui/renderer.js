@@ -1,7 +1,5 @@
 import { State } from './state.js';
-// import story from '../engine/story.json' assert {type:'json'};
-
-const API_URL = 'http://localhost:3000';
+import story from '../engine/story.json' assert {type:'json'};
 
 const app = document.getElementById('app');
 app.innerHTML = `
@@ -70,30 +68,15 @@ export function renderChoices(list){
   });
 }
 
-async function selectChoice(choice){
+function selectChoice(choice){
+  State.update(st=>{
+    st.panic = Math.max(0, Math.min(2, st.panic + (choice.panic||0)));
+    if(choice.setFlag) st.flags.add(choice.setFlag);
+    st.currentNodeId = choice.target;
+  });
   renderBubble({s:'p', t:choice.text});
-  try {
-    const response = await fetch(`${API_URL}/game/choice`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ choice })
-    });
-    if (!response.ok) throw new Error('Failed to select choice');
-    const { node, state } = await response.json();
-    
-    // Update local state for UI rendering if needed
-    State.update(st => {
-        st.panic = state.panic;
-        st.flags = new Set(state.flags);
-        st.currentNodeId = state.currentNodeId;
-    });
-
-    await processNode(node);
-
-  } catch (error) {
-      console.error('Error selecting choice:', error);
-      renderBubble({s:'sys', t:'Error connecting to server.'});
-  }
+  State.timeline.push({panic: State.panic});
+  processNode();
 }
 
 sendBtn.onclick=()=>handleFree();
@@ -115,7 +98,8 @@ async function handleFree(){
   input.value='';
 }
 
-export async function processNode(node){
+export async function processNode(){
+  const node=story[State.currentNodeId];
   if(!node){ console.error('missing node'); return; }
   for(const m of node.messages){
     await new Promise(r=>setTimeout(r, m.s==='sys'?100:600));
@@ -142,29 +126,10 @@ export async function processNode(node){
   }
 }
 
-async function startGame() {
-    try {
-        const response = await fetch(`${API_URL}/game/start`);
-        if (!response.ok) throw new Error('Failed to start game');
-        const { node, state } = await response.json();
-        
-        State.update(st => {
-            st.panic = state.panic;
-            st.flags = new Set(state.flags);
-            st.currentNodeId = state.currentNodeId;
-        });
-        
-        await processNode(node);
-    } catch (error) {
-        console.error('Error starting game:', error);
-        renderBubble({s:'sys', t:'Could not connect to the game server. Please try again later.'});
-    }
-}
-
 // subscriber keeps UI in sync (future)
 State.subscribe(()=>{});
 
-startGame();
+processNode();
 
 document.getElementById('home-btn').onclick = () => {
     if (confirm('Are you sure you want to restart the game?')) {

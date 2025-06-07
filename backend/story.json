@@ -19,18 +19,21 @@
       {
         "text": "Where are you?",
         "target": "NODE_2A",
-        "panic": 0
+        "panic": 0,
+        "timeCost": 2
       },
       {
         "text": "Are you sure?",
         "target": "NODE_2B",
-        "panic": -1
+        "panic": -1,
+        "timeCost": 2
       },
       {
         "text": "Call the police!",
         "target": "NODE_2C",
         "panic": 2,
-        "setFlag": "called_police"
+        "setFlag": "called_police",
+        "timeCost": 3
       }
     ]
   },
@@ -80,11 +83,13 @@
     "choices": [
       {
         "text": "Stay quiet and listen.",
-        "target": "NODE_3A"
+        "target": "NODE_3A",
+        "timeCost": 3
       },
       {
         "text": "Go investigate.",
-        "target": "FAIL_STATE_INVESTIGATE"
+        "target": "FAIL_STATE_INVESTIGATE",
+        "timeCost": 4
       }
     ]
   },
@@ -102,11 +107,13 @@
     "choices": [
       {
         "text": "Tell them someone is in the house.",
-        "target": "NODE_3C_POLICE_CALLED"
+        "target": "NODE_3C_POLICE_CALLED",
+        "timeCost": 5
       },
       {
         "text": "Hang up.",
-        "target": "FAIL_STATE_HANG_UP"
+        "target": "FAIL_STATE_HANG_UP",
+        "timeCost": 1
       }
     ]
   },
@@ -129,12 +136,14 @@
       {
         "text": "Don't make a sound.",
         "target": "NODE_4_SAFE",
-        "panic": 0
+        "panic": 0,
+        "timeCost": 3
       },
       {
         "text": "Get ready to run.",
         "target": "NODE_4_RUN",
-        "panic": 1
+        "panic": 1,
+        "timeCost": 2
       }
     ]
   },
